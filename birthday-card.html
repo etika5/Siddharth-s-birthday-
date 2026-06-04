@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>For You</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;1,400;1,500&family=Fraunces:ital,opsz,wght@1,9..144,300;1,9..144,400&family=Caveat:wght@400;600&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --ink:#3a2a20;--ink2:#5d473a;--ink3:#8a7460;
+  --rose:#b06a63;--terra:#bb5e44;--gold:#b08a54;
+}
+html,body{width:100%;height:100%;overflow:hidden;}
+body{
+  font-family:'Cormorant Garamond','Georgia',serif;color:var(--ink);
+  background:linear-gradient(170deg,#f7eedd 0%,#ede0c8 50%,#e3d0b5 100%);
+}
+
+/* hidden radio buttons drive the navigation (pure CSS, no JS) */
+.nav-radio{position:absolute;width:0;height:0;opacity:0;pointer-events:none;}
+
+/* decorative layers */
+.grain{position:fixed;inset:0;pointer-events:none;z-index:1;opacity:0.3;mix-blend-mode:multiply;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.3'/%3E%3C/svg%3E");}
+.vignette{position:fixed;inset:0;pointer-events:none;z-index:1;
+  background:radial-gradient(ellipse at 50% 50%,transparent 55%,rgba(60,35,15,0.18) 100%);}
+
+/* PAGES: fade transition, stacked */
+.page{
+  position:fixed;inset:0;z-index:2;
+  overflow-y:auto;-webkit-overflow-scrolling:touch;
+  opacity:0;visibility:hidden;pointer-events:none;
+  transition:opacity 0.9s ease, visibility 0.9s ease;
+}
+.page-inner{
+  min-height:100%;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  padding:54px 24px 120px;text-align:center;
+}
+
+/* show the page whose radio is checked */
+#nav0:checked ~ .page0,
+#nav1:checked ~ .page1,
+#nav2:checked ~ .page2,
+#nav3:checked ~ .page3,
+#nav4:checked ~ .page4,
+#nav5:checked ~ .page5,
+#nav6:checked ~ .page6{
+  opacity:1;visibility:visible;pointer-events:auto;
+}
+
+/* COVER */
+.kicker{font-family:'Caveat',cursive;font-size:1.8rem;color:var(--rose);transform:rotate(-2.5deg);display:inline-block;margin-bottom:8px;}
+.cover-title{font-family:'Fraunces','Georgia',serif;font-style:italic;font-weight:300;font-size:clamp(2.5rem,9vw,4.2rem);line-height:1.08;margin-bottom:6px;}
+.cover-title span{color:var(--terra);}
+.divider{margin:16px auto;width:140px;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);}
+.cover-msg{font-style:italic;font-size:clamp(1.1rem,4vw,1.35rem);line-height:1.8;color:var(--ink2);max-width:44ch;margin:0 auto;}
+.open-btn{display:inline-block;margin-top:34px;font-family:'Caveat',cursive;font-size:1.6rem;background:var(--terra);color:#fff;padding:14px 38px;border-radius:40px;cursor:pointer;letter-spacing:.5px;user-select:none;}
+.open-btn:active{transform:scale(0.97);}
+
+/* POEM */
+.verse-label{font-family:'Caveat',cursive;font-size:1.6rem;color:var(--rose);margin-bottom:4px;}
+.verse-bar{width:36px;height:1px;background:var(--gold);margin:0 auto 24px;}
+.poem-text{font-size:clamp(1.12rem,4.2vw,1.42rem);line-height:1.72;color:var(--ink);white-space:pre-line;max-width:580px;}
+
+/* CLOSING */
+.closing-big{font-family:'Fraunces','Georgia',serif;font-style:italic;font-weight:300;font-size:clamp(1.7rem,6vw,2.4rem);color:var(--terra);margin-bottom:20px;}
+.closing-note{font-style:italic;font-size:clamp(1.1rem,3.8vw,1.35rem);line-height:1.8;color:var(--ink2);max-width:42ch;margin:0 auto 24px;}
+.closing-sign{font-family:'Caveat',cursive;font-size:1.7rem;color:var(--ink);transform:rotate(-2deg);display:inline-block;}
+
+/* ARROWS (labels) */
+.arrow{
+  position:absolute;top:50%;transform:translateY(-50%);z-index:6;
+  width:52px;height:52px;border-radius:50%;
+  border:1px solid rgba(90,60,30,0.25);background:rgba(255,250,240,0.7);
+  display:flex;align-items:center;justify-content:center;
+  font-size:22px;color:var(--ink2);cursor:pointer;user-select:none;
+  text-decoration:none;
+}
+.arrow:active{transform:translateY(-50%) scale(0.93);}
+.arrow.left{left:max(12px,3vw);}
+.arrow.right{right:max(12px,3vw);}
+
+/* DOTS (global, shown after cover) */
+.dotsbar{position:fixed;bottom:30px;left:0;right:0;z-index:7;display:none;justify-content:center;gap:11px;}
+#nav1:checked ~ .dotsbar,#nav2:checked ~ .dotsbar,#nav3:checked ~ .dotsbar,
+#nav4:checked ~ .dotsbar,#nav5:checked ~ .dotsbar,#nav6:checked ~ .dotsbar{display:flex;}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--ink3);opacity:.3;cursor:pointer;transition:.3s;display:block;}
+#nav1:checked ~ .dotsbar .d1,#nav2:checked ~ .dotsbar .d2,#nav3:checked ~ .dotsbar .d3,
+#nav4:checked ~ .dotsbar .d4,#nav5:checked ~ .dotsbar .d5,#nav6:checked ~ .dotsbar .d6{
+  opacity:1;background:var(--terra);transform:scale(1.35);}
+
+/* MUSIC BUTTON (shown by JS if available) */
+.music-toggle{position:fixed;top:16px;right:16px;z-index:8;width:42px;height:42px;border-radius:50%;
+  border:1px solid rgba(90,60,30,0.25);background:rgba(255,250,240,0.6);cursor:pointer;
+  display:none;align-items:center;justify-content:center;gap:2px;}
+.music-toggle.visible{display:flex;}
+.m-bar{width:3px;border-radius:2px;background:var(--terra);}
+.m-bar:nth-child(1){height:6px;}.m-bar:nth-child(2){height:12px;}.m-bar:nth-child(3){height:9px;}.m-bar:nth-child(4){height:5px;}
+.playing .m-bar{animation:eq 0.9s ease-in-out infinite;}
+.m-bar:nth-child(2){animation-delay:.2s;}.m-bar:nth-child(3){animation-delay:.4s;}.m-bar:nth-child(4){animation-delay:.1s;}
+@keyframes eq{0%,100%{transform:scaleY(0.4);}50%{transform:scaleY(1.5);}}
+.muted .m-bar{animation:none !important;height:5px !important;opacity:.4;}
+
+/* motes */
+.mote{position:fixed;border-radius:50%;pointer-events:none;z-index:0;
+  background:radial-gradient(circle,rgba(220,180,100,0.5),transparent 70%);animation:mfloat linear infinite;}
+@keyframes mfloat{0%{transform:translateY(10px);opacity:0;}10%{opacity:.7;}90%{opacity:.5;}100%{transform:translateY(-105vh);opacity:0;}}
+</style>
+</head>
+<body>
+
+<!-- navigation state (pure CSS) -->
+<input class="nav-radio" type="radio" name="nav" id="nav0" checked>
+<input class="nav-radio" type="radio" name="nav" id="nav1">
+<input class="nav-radio" type="radio" name="nav" id="nav2">
+<input class="nav-radio" type="radio" name="nav" id="nav3">
+<input class="nav-radio" type="radio" name="nav" id="nav4">
+<input class="nav-radio" type="radio" name="nav" id="nav5">
+<input class="nav-radio" type="radio" name="nav" id="nav6">
+
+<div class="grain"></div>
+<div class="vignette"></div>
+
+<button class="music-toggle muted" id="musicToggle">
+  <span class="m-bar"></span><span class="m-bar"></span><span class="m-bar"></span><span class="m-bar"></span>
+</button>
+
+<!-- PAGE 0: COVER -->
+<div class="page page0">
+  <div class="page-inner">
+    <div class="kicker">for you,</div>
+    <div class="cover-title">Happy 25th<br><span>Birthday</span></div>
+    <div class="divider"></div>
+    <p class="cover-msg">You make my days special just by being present in them. Yet, I am not there with you on your special day. To make up for it, I thought this is the perfect time to show you what you wanted &mdash; the poems I've written about you, everything my heart has felt.</p>
+    <label class="open-btn" for="nav1">open your gift &hearts;</label>
+  </div>
+</div>
+
+<!-- PAGE 1 -->
+<div class="page page1">
+  <label class="arrow left" for="nav0">&larr;</label>
+  <label class="arrow right" for="nav2">&rarr;</label>
+  <div class="page-inner">
+    <div class="verse-label">I</div><div class="verse-bar"></div>
+    <div class="poem-text">I wished for an everlasting love
+A soulmate, my dove
+And I met him out of nowhere
+Ended up in his arms with no care
+We were bound together
+In a messy entangled fate
+Too afraid to lose one another
+Too afraid to even stay
+There was something that lingered between us
+Something that was strong and true
+Something we build over time
+With laughter, tears, and feelings pure
+I hope this is where my dream finds its place
+I hope this is where my story begins
+I wished for an everlasting love and
+I hope it is you who will remain</div>
+  </div>
+</div>
+
+<!-- PAGE 2 -->
+<div class="page page2">
+  <label class="arrow left" for="nav1">&larr;</label>
+  <label class="arrow right" for="nav3">&rarr;</label>
+  <div class="page-inner">
+    <div class="verse-label">II</div><div class="verse-bar"></div>
+    <div class="poem-text">As I hold you close in my arms
+I steal a glance at your face
+Wondering if this is my last
+Not knowing if I'll get another chance
+You look so perfect
+So blissful and kind
+It breaks my heart to even think about
+This might be my last time
+So I stare at you all I can
+Capturing the strands of your hair in my mind
+Studying the way your breath rises and falls
+Tracing your every little line
+The innocence that shines as you close your eyes
+Your lashes casting a shadow on your face
+It feels so sacred watching you up so close
+The way you rest with such grace
+I can never get tired of it
+I can admire it for hours
+So I stare at you all I can
+As you fall asleep in my arms</div>
+  </div>
+</div>
+
+<!-- PAGE 3 -->
+<div class="page page3">
+  <label class="arrow left" for="nav2">&larr;</label>
+  <label class="arrow right" for="nav4">&rarr;</label>
+  <div class="page-inner">
+    <div class="verse-label">III</div><div class="verse-bar"></div>
+    <div class="poem-text">I still remember the night
+When you rested your head on my lap for the first time
+How I melted at that sight
+How you looked so vulnerable and&#8230;mine
+You warned me about touching your hair
+But it was too tempting the way they looked so soft
+How could I resist myself there
+When you were laying on me with such comfort?
+There was a warm feeling building inside me
+Something I've never felt before
+The way you talked made me feel so close to you
+And my heart took it for something more
+Then you take my hand in yours and say
+&#8220;Please stay for the night, please don't go&#8221;
+I still remember how I wished I could
+How difficult it was for me to say no
+But trust me darling if today
+You hold my hand asking me to stay
+I will leave everything behind
+And run into your arms to be by your side</div>
+  </div>
+</div>
+
+<!-- PAGE 4 -->
+<div class="page page4">
+  <label class="arrow left" for="nav3">&larr;</label>
+  <label class="arrow right" for="nav5">&rarr;</label>
+  <div class="page-inner">
+    <div class="verse-label">IV</div><div class="verse-bar"></div>
+    <div class="poem-text">Maybe it is your tousled brown hair
+Minimal wardrobe and strong arms
+Maybe it's the way you smoothly talk
+Holding conversations with anyone for hours
+Maybe it is the way you twirl the pen between your fingers
+Or the way you shuffle the cards
+Or the way you play the piano
+With your entire body, giving it your all
+Maybe it is the way you calculate the sleep you'd get every night
+And the way you get it wrong every single time
+Maybe it is your voice captivating my mind
+Or the small acts of courtesy you leave behind
+Maybe it's the way your hair falls on your face
+Or how you're so cute and stubborn
+Maybe it's your full-teethed laughter
+Or how you look so hot in my favourite colour
+Maybe it is your teasing smile
+Your mocking tone and deep brown eyes
+Maybe it's your carefree attitude and sharp mind
+And the way you choose bitter truths over sweet lies
+Maybe it's your elegant hands, and the way they hold mine
+Or maybe it's the way you lock in when it's time
+Your sculpted body and pretty face
+Or maybe it's your tight warm embrace
+Maybe it's your humor and talent
+Or the way you eat to your heart's content
+Maybe it's the way you crave sweet
+Or maybe I just like the way you breathe</div>
+  </div>
+</div>
+
+<!-- PAGE 5 -->
+<div class="page page5">
+  <label class="arrow left" for="nav4">&larr;</label>
+  <label class="arrow right" for="nav6">&rarr;</label>
+  <div class="page-inner">
+    <div class="verse-label">V</div><div class="verse-bar"></div>
+    <div class="poem-text">In a world full of lies
+He was looking for his truth
+He was one of a kind
+Wanting to get inside others' mind
+He desired for something whole
+A real feeling that'll stay
+No fancy promises of forever
+Just a routine warm &#8220;are you okay and how was your day?&#8221;
+His dreams were mundane
+But his aspirations high
+And he cared so so deeply
+About the people in his life
+He was smart and quick
+Yet he somehow believed
+That he could hide his tears
+With laughter and funny stories
+He was a man
+He has been through that heat
+But he was also a child
+The naughtiest you'll ever meet
+He was a star
+Shining the brightest amongst infinity
+He was a dream
+Turning into my reality</div>
+  </div>
+</div>
+
+<!-- PAGE 6: CLOSING -->
+<div class="page page6">
+  <label class="arrow left" for="nav5">&larr;</label>
+  <div class="page-inner">
+    <div class="closing-big">&ldquo;May the comfort we build together outlive the ache that found us.&rdquo;</div>
+    <div class="divider"></div>
+    <span class="closing-sign">Yours lovingly,<br>Etika. <span style="color:var(--rose)">&hearts;</span></span>
+  </div>
+</div>
+
+<!-- DOTS -->
+<div class="dotsbar">
+  <label class="dot d1" for="nav1"></label>
+  <label class="dot d2" for="nav2"></label>
+  <label class="dot d3" for="nav3"></label>
+  <label class="dot d4" for="nav4"></label>
+  <label class="dot d5" for="nav5"></label>
+  <label class="dot d6" for="nav6"></label>
+</div>
+
+<script>
+/* Music is the ONLY thing using JS. If JS is blocked, the card still works fully. */
+(function(){
+  var ctx=null,master=null,interval=null,playing=false,nextT=0,stepN=0,chI=0,started=false;
+  var chords=[[130.81,196,329.63],[196,246.94,392],[220,329.63,523.25],[174.61,261.63,392]];
+  var mel=[261.63,293.66,329.63,392,440,523.25,587.33];
+  var btn=document.getElementById('musicToggle');
+
+  function osc(type,freq,t,dur,vol){
+    var o=ctx.createOscillator();o.type=type;o.frequency.value=freq;
+    var g=ctx.createGain();g.gain.setValueAtTime(0,t);
+    g.gain.linearRampToValueAtTime(vol,t+0.08);
+    if(type==='sine'){g.gain.setValueAtTime(vol,t+dur-1.5);}
+    g.gain.linearRampToValueAtTime(0.0001,t+dur);
+    o.connect(g);g.connect(master);o.start(t);o.stop(t+dur+0.1);
+  }
+  function tick(){
+    if(!ctx)return;
+    try{
+      while(nextT<ctx.currentTime+0.5){
+        if(stepN%6===0){var c=chords[chI%chords.length];for(var i=0;i<c.length;i++){osc('sine',c[i],nextT,6*1.18+0.3,0.04);}chI++;}
+        if(Math.random()<0.7){osc('triangle',mel[Math.floor(Math.random()*mel.length)],nextT,2.2,0.07+Math.random()*0.05);}
+        nextT+=1.18;stepN++;
+      }
+    }catch(e){}
+  }
+  function start(){
+    try{
+      if(!ctx){
+        ctx=new (window.AudioContext||window.webkitAudioContext)();
+        master=ctx.createGain();master.gain.value=0;
+        var lp=ctx.createBiquadFilter();lp.type='lowpass';lp.frequency.value=2400;
+        master.connect(lp);lp.connect(ctx.destination);
+        var dl=ctx.createDelay(2);dl.delayTime.value=0.42;
+        var fb=ctx.createGain();fb.gain.value=0.28;
+        var wet=ctx.createGain();wet.gain.value=0.22;
+        lp.connect(dl);dl.connect(fb);fb.connect(dl);dl.connect(wet);wet.connect(ctx.destination);
+      }
+      if(ctx.state==='suspended')ctx.resume();
+      nextT=ctx.currentTime+0.2;stepN=0;chI=0;
+      master.gain.cancelScheduledValues(ctx.currentTime);
+      master.gain.setValueAtTime(0.0001,ctx.currentTime);
+      master.gain.linearRampToValueAtTime(0.16,ctx.currentTime+3);
+      if(!interval)interval=setInterval(tick,130);
+      playing=true;btn.className='music-toggle visible playing';
+    }catch(e){}
+  }
+  function stop(){
+    try{master.gain.cancelScheduledValues(ctx.currentTime);master.gain.linearRampToValueAtTime(0.0001,ctx.currentTime+0.8);}catch(e){}
+    playing=false;btn.className='music-toggle visible muted';
+  }
+  btn.addEventListener('click',function(){playing?stop():start();});
+
+  // start music the first time the card is opened (a tap on a nav radio)
+  var radios=document.querySelectorAll('input[name=nav]');
+  for(var i=0;i<radios.length;i++){
+    radios[i].addEventListener('change',function(){
+      if(this.id!=='nav0' && !started){started=true;btn.className='music-toggle visible playing';start();}
+    });
+  }
+
+  // floating motes
+  for(var k=0;k<10;k++){
+    var m=document.createElement('div');m.className='mote';
+    var s=3+Math.random()*5;
+    m.style.width=s+'px';m.style.height=s+'px';
+    m.style.left=(Math.random()*100)+'vw';m.style.bottom=(-10-Math.random()*20)+'px';
+    m.style.animationDuration=(14+Math.random()*14)+'s';m.style.animationDelay=(Math.random()*14)+'s';
+    document.body.appendChild(m);
+  }
+})();
+</script>
+</body>
+</html>
